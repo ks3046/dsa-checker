@@ -1,4 +1,7 @@
 """Minimal RAG: chunk -> BM25 retrieve -> grounded answer with citations."""
+import time
+from google import genai
+from google.genai import types
 import glob
 import os
 import re
@@ -11,7 +14,7 @@ CHUNK_WORDS = 180        # TODO(you): experiment with this in your evals
 OVERLAP = 40
 TOP_K = 4
 MIN_SCORE = 1.0          # TODO(you): tune using your eval set; below this we refuse without calling the LLM
-MODEL = os.getenv("MODEL", "claude-haiku-5-5")
+MODEL = os.getenv("MODEL", "gemini-3.5-flash-lite")
 REFUSAL = "I don't know based on the provided sources."
 
 SYSTEM = f"""You are a study assistant for data structures and algorithms.
@@ -67,11 +70,27 @@ class Retriever:
 _client = None
 
 
-def _llm() -> anthropic.Anthropic:
+def _llm():
     global _client
     if _client is None:
-        _client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
+        _client = genai.Client()  # reads GEMINI_API_KEY
     return _client
+
+
+def _generate(prompt: str) -> str:
+    for attempt in range(4):
+        try:
+            resp = _llm().models.generate_content(
+                model=MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(system_instruction=SYSTEM),
+            )
+            return (resp.text or "").strip()
+        except Exception as e:
+            if "429" in str(e) and attempt < 3:  # free-tier rate limit: wait and retry
+                time.sleep(5 * 2 ** attempt)
+                continue
+            raise
 
 
 def answer(question: str, retriever: Retriever) -> dict:
@@ -86,11 +105,5 @@ def answer(question: str, retriever: Retriever) -> dict:
     ]
     context = "\n\n".join(f"[{s['n']}] ({s['title']})\n{s['text']}" for s in sources)
 
-    resp = _llm().messages.create(
-        model=MODEL,
-        max_tokens=500,
-        system=SYSTEM,
-        messages=[{"role": "user", "content": f"Sources:\n{context}\n\nQuestion: {question}"}],
-    )
-    text = resp.content[0].text.strip()
+    text = _generate(f"Sources:\n{context}\n\nQuestion: {question}")
     return {"answer": text, "sources": sources, "refused": REFUSAL in text}
