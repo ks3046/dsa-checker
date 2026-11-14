@@ -1,0 +1,7 @@
+[
+  {"question": "How does binary search work?", "type": "answerable", "expect": ["middle", "half"]},
+  {"question": "What is the average time complexity of quicksort?", "type": "answerable", "expect": ["n log n", "log"]},
+  {"question": "What is the difference between a stack and a queue?", "type": "answerable", "expect": ["lifo", "fifo", "last", "first"]},
+  {"question": "Who won the 2022 FIFA World Cup?", "type": "out_of_scope", "expect": []},
+  {"question": "Which sorting algorithm is best?", "type": "ambiguous", "expect": []}
+]
