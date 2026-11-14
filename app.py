@@ -2,13 +2,11 @@ import os
 
 import streamlit as st
 
-# Streamlit Cloud: put ANTHROPIC_API_KEY in app secrets. Locally: use an env var.
 try:
-    if "ANTHROPIC_API_KEY" in st.secrets:
-        os.environ["ANTHROPIC_API_KEY"] = st.secrets["ANTHROPIC_API_KEY"]
+    if "GEMINI_API_KEY" in st.secrets:
+        os.environ["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"]
 except Exception:
     pass
-
 from rag import Retriever, answer  # noqa: E402
 
 MAX_QUESTIONS_PER_SESSION = 10  # basic cost guard; also set a spend limit in your API console
